@@ -83,7 +83,7 @@ export default function Home() {
               <span className="text-emerald-400">0</span>{' '}
               <CyclingText 
                 words={['stress', 'config', 'hassle', 'effort']} 
-                className="text-white"
+                className="text-white font-mono"
                 interval={2000}
               />
             </h1>
