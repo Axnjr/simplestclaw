@@ -37,13 +37,32 @@ Download for your platform:
 
 ### Option 2: Hosted (Railway)
 
-Click the button below, sign in to Railway, add your API key, and you're done:
-
-**Supported providers:** Anthropic, OpenAI, Google Gemini, OpenRouter
+Deploy OpenClaw to the cloud in under 60 seconds:
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/gEz3TD?referralCode=Y7R5kV)
 
-You pay Railway directly (~$5/month for hosting). We never touch your money.
+**Steps:**
+1. Click the button above
+2. Sign in to Railway (or create account)
+3. Enter your API key when prompted
+4. Click "Deploy"
+5. Visit your gateway URL
+
+**Requirements:**
+- Railway Hobby plan ($5/month) - free trial has memory limits
+- API key from one of: Anthropic, OpenAI, Google, or OpenRouter
+
+**Environment Variables:**
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | One of these | From [console.anthropic.com](https://console.anthropic.com) |
+| `OPENAI_API_KEY` | required | From [platform.openai.com](https://platform.openai.com) |
+| `GOOGLE_API_KEY` | | From [aistudio.google.com](https://aistudio.google.com) |
+| `OPENROUTER_API_KEY` | | From [openrouter.ai](https://openrouter.ai) |
+| `OPENCLAW_GATEWAY_TOKEN` | Auto | Auto-generated authentication token |
+
+You pay Railway directly. We never touch your money.
 
 ## Development
 

@@ -123,10 +123,10 @@ export default function Home() {
                   </svg>
                 </div>
                 <p className="text-[15px] text-white/50 leading-relaxed mb-4">
-                  One-click deploy. Runs 24/7, accessible from any device.
+                  Enter API key, click deploy, done. Runs 24/7, accessible from any device.
                 </p>
                 <span className="inline-block text-[13px] font-medium px-2.5 py-1 rounded-full bg-white/5 text-white/60">
-                  Via Railway
+                  $5/month via Railway
                 </span>
                 <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-4 text-[13px] text-white/40">
                   <span>24/7 uptime</span>
@@ -303,28 +303,35 @@ export default function Home() {
               </p>
 
               <div className="mt-8 p-5 rounded-xl bg-white/[0.02] border border-white/5">
-                <p className="text-[13px] text-white/40 mb-1">What we've set up for you:</p>
-                <p className="text-[13px] text-emerald-400 mb-4">No servers to manage. No code to write. Just works.</p>
-                <ul className="space-y-3 text-[14px]">
-                  <li className="flex items-start gap-2">
-                    <span className="text-white/30 mt-0.5">•</span>
-                    <div>
-                      <span className="text-white/70">Easy-to-use interface</span>
-                      <span className="text-white/40"> Chat, see tool actions, and code execution in one place.</span>
-                    </div>
+                <p className="text-[13px] text-white/40 mb-1">Three steps:</p>
+                <ol className="space-y-2 text-[14px] mb-6">
+                  <li className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-medium">1.</span>
+                    <span className="text-white/70">Enter your API key (Anthropic, OpenAI, Google, or OpenRouter)</span>
                   </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-medium">2.</span>
+                    <span className="text-white/70">Click Deploy</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-medium">3.</span>
+                    <span className="text-white/70">Visit your gateway URL</span>
+                  </li>
+                </ol>
+                <p className="text-[13px] text-white/40 mb-1 pt-4 border-t border-white/5">What you get:</p>
+                <ul className="space-y-3 text-[14px] mt-3">
                   <li className="flex items-start gap-2">
                     <span className="text-white/30 mt-0.5">•</span>
                     <div>
-                      <span className="text-white/70">OpenClaw pre-installed and configured</span>
-                      <span className="text-white/40"> Ready to chat the moment you deploy.</span>
+                      <span className="text-white/70">OpenClaw pre-configured</span>
+                      <span className="text-white/40"> Ready to use the moment you deploy.</span>
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-white/30 mt-0.5">•</span>
                     <div>
                       <span className="text-white/70">Always online</span>
-                      <span className="text-white/40"> OpenClaw stays available 24/7, even at 3am.</span>
+                      <span className="text-white/40"> OpenClaw stays available 24/7.</span>
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
@@ -335,6 +342,9 @@ export default function Home() {
                     </div>
                   </li>
                 </ul>
+                <p className="text-[12px] text-white/30 mt-4 pt-4 border-t border-white/5">
+                  Requires Railway Hobby plan ($5/month). Free trial has memory limits.
+                </p>
               </div>
 
               <div className="mt-12 pt-8 border-t border-white/5">
