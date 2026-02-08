@@ -138,6 +138,11 @@ impl SidecarManager {
         println!("[openclaw] Using node at: {}", node_cmd);
         println!("[openclaw] Using npx-cli at: {}", npx_cli_path);
 
+        // Clear npx cache to prevent corrupted package issues
+        // The npx cache at ~/.npm/_npx can become corrupted and cause
+        // "Cannot find package" errors with dependencies like axios
+        clear_npx_cache();
+
         // Get the bin directory for PATH
         let node_path = std::path::Path::new(&node_cmd);
         let bin_dir = node_path.parent().map(|p| p.to_string_lossy().to_string());
@@ -516,6 +521,32 @@ pub fn kill_orphaned_gateway_processes() {
         let _ = Command::new("taskkill")
             .args(["/F", "/IM", "openclaw*"])
             .output();
+    }
+}
+
+/// Clear the npx cache to prevent corrupted package issues.
+/// The npx cache at ~/.npm/_npx can become corrupted and cause
+/// "Cannot find package" errors (e.g., with axios dependency).
+/// This is a known npm issue - the cache doesn't auto-update.
+fn clear_npx_cache() {
+    if let Some(home) = dirs::home_dir() {
+        // Primary location: ~/.npm/_npx
+        let npx_cache = home.join(".npm").join("_npx");
+        if npx_cache.exists() {
+            println!("[openclaw] Clearing npx cache at {:?}", npx_cache);
+            if let Err(e) = std::fs::remove_dir_all(&npx_cache) {
+                println!("[openclaw] Warning: Failed to clear npx cache: {}", e);
+            } else {
+                println!("[openclaw] npx cache cleared successfully");
+            }
+        }
+        
+        // Secondary location: ~/.npx (older npm versions)
+        let npx_alt = home.join(".npx");
+        if npx_alt.exists() {
+            println!("[openclaw] Clearing alternate npx cache at {:?}", npx_alt);
+            let _ = std::fs::remove_dir_all(&npx_alt);
+        }
     }
 }
 
