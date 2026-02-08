@@ -113,11 +113,9 @@ function validateEnvironment() {
  * Generates the welcome/status HTML page shown at the root URL.
  * Provides connection instructions and current gateway status.
  * 
- * @param {string} gatewayHost - The public hostname of the gateway
  * @returns {string} HTML page content
  */
-function getWelcomePage(gatewayHost) {
-  const wsUrl = `wss://${gatewayHost}`;
+function getWelcomePage() {
   const token = process.env.OPENCLAW_GATEWAY_TOKEN || null;
   
   // Determine status
@@ -493,9 +491,8 @@ const server = http.createServer((req, res) => {
 
   // Welcome page at root
   if (req.url === '/' && req.method === 'GET') {
-    const host = req.headers.host || 'localhost';
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(getWelcomePage(host));
+    res.end(getWelcomePage());
     return;
   }
 
