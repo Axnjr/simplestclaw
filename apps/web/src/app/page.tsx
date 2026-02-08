@@ -416,10 +416,14 @@ export default function Home() {
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-emerald-400 font-medium">2.</span>
-                    <span className="text-white/70">Follow the steps</span>
+                    <span className="text-white/70">Configure key</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-emerald-400 font-medium">3.</span>
+                    <span className="text-white/70">Copy token</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-medium">4.</span>
                     <span className="text-white/70">Use OpenClaw in the cloud</span>
                   </li>
                 </ol>
