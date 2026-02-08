@@ -72,12 +72,14 @@ export default function Home() {
             href="https://github.com/mbron64/simplestclaw"
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-2 text-[13px] text-white/50 hover:text-white/90 transition-colors"
+            className="group flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md border border-white/20 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/30 transition-all"
           >
-            <span>Star on GitHub</span>
-            <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-white/60 group-hover:text-yellow-400 transition-colors" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z" />
             </svg>
+            <span className="text-white/70 group-hover:text-white/90 transition-colors">Star</span>
+            <span className="text-white/40">|</span>
+            <span className="text-white/50 group-hover:text-white/70 transition-colors">GitHub</span>
           </a>
         </div>
       </nav>
