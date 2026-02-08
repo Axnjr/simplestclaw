@@ -44,8 +44,7 @@ function startOpenClaw() {
     'openclaw', 'gateway',
     '--port', String(OPENCLAW_PORT),
     '--bind', 'lan',
-    '--allow-unconfigured',
-    '--force'  // Kill any existing process on this port
+    '--allow-unconfigured'
   ];
 
   // Add token if configured
