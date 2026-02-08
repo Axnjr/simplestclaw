@@ -187,7 +187,7 @@ export default function Home() {
                     Enter API key, click deploy, done. Runs 24/7, accessible from any device.
                   </p>
                   <span className="inline-block text-[13px] font-medium px-2.5 py-1 rounded-full bg-white/5 text-white/60">
-                    $5/month via Railway
+                    via Railway
                   </span>
                   <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-4 text-[13px] text-white/40">
                     <span>24/7 uptime</span>
