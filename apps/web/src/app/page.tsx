@@ -123,9 +123,7 @@ export default function Home() {
                 <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-4 text-[13px] text-white/40">
                   <span>macOS</span>
                   <span className="w-1 h-1 rounded-full bg-white/20" />
-                  <span>Windows</span>
-                  <span className="w-1 h-1 rounded-full bg-white/20" />
-                  <span>Linux</span>
+                  <span className="text-white/25">Windows & Linux coming soon</span>
                 </div>
               </button>
 
@@ -192,29 +190,35 @@ export default function Home() {
               </p>
 
               <div className="grid grid-cols-3 gap-3">
-                {[
-                  { name: 'macOS', sub: 'Universal', platform: 'macos' as const },
-                  { name: 'Windows', sub: '10+', platform: 'windows' as const },
-                  { name: 'Linux', sub: '.deb', platform: 'linux' as const },
-                ].map((p) => (
-                  <a
-                    key={p.name}
-                    href={getDownloadUrl(p.platform)}
-                    download
-                    className="relative p-6 rounded-xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] hover:border-white/20 transition-all text-center"
-                  >
-                    <GlowingEffect
-                      spread={40}
-                      glow={true}
-                      disabled={false}
-                      proximity={64}
-                      inactiveZone={0.01}
-                      borderWidth={2}
-                    />
-                    <div className="text-[17px] font-medium">{p.name}</div>
-                    <div className="text-[13px] text-white/40 mt-1">{p.sub}</div>
-                  </a>
-                ))}
+                {/* macOS - Available */}
+                <a
+                  href={getDownloadUrl('macos')}
+                  download
+                  className="relative p-6 rounded-xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] hover:border-white/20 transition-all text-center"
+                >
+                  <GlowingEffect
+                    spread={40}
+                    glow={true}
+                    disabled={false}
+                    proximity={64}
+                    inactiveZone={0.01}
+                    borderWidth={2}
+                  />
+                  <div className="text-[17px] font-medium">macOS</div>
+                  <div className="text-[13px] text-white/40 mt-1">Universal</div>
+                </a>
+                
+                {/* Windows - Coming Soon */}
+                <div className="relative p-6 rounded-xl bg-white/[0.01] border border-white/5 text-center opacity-50 cursor-not-allowed">
+                  <div className="text-[17px] font-medium text-white/50">Windows</div>
+                  <div className="text-[13px] text-white/30 mt-1">Coming soon</div>
+                </div>
+                
+                {/* Linux - Coming Soon */}
+                <div className="relative p-6 rounded-xl bg-white/[0.01] border border-white/5 text-center opacity-50 cursor-not-allowed">
+                  <div className="text-[17px] font-medium text-white/50">Linux</div>
+                  <div className="text-[13px] text-white/30 mt-1">Coming soon</div>
+                </div>
               </div>
 
               <div className="mt-8 p-5 rounded-xl bg-white/[0.02] border border-white/5">
