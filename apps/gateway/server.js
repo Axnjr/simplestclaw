@@ -131,20 +131,31 @@ const server = http.createServer((req, res) => {
 server.on('upgrade', (req, socket, head) => {
   // Create TCP connection to OpenClaw
   const proxySocket = net.connect(OPENCLAW_PORT, 'localhost', () => {
-    // Filter out proxy headers so OpenClaw treats connection as local
-    const filteredHeaders = Object.entries(req.headers)
+    // Rewrite headers to make connection appear local
+    const rewrittenHeaders = Object.entries(req.headers)
       .filter(([key]) => {
         const lowerKey = key.toLowerCase();
+        // Filter out proxy headers
         return !lowerKey.startsWith('x-forwarded') && 
                !lowerKey.startsWith('x-real') &&
                lowerKey !== 'forwarded';
       })
-      .map(([key, value]) => `${key}: ${value}`)
+      .map(([key, value]) => {
+        const lowerKey = key.toLowerCase();
+        // Rewrite host and origin to localhost
+        if (lowerKey === 'host') {
+          return `${key}: localhost:${OPENCLAW_PORT}`;
+        }
+        if (lowerKey === 'origin') {
+          return `${key}: http://localhost:${OPENCLAW_PORT}`;
+        }
+        return `${key}: ${value}`;
+      })
       .join('\r\n');
     
     const upgradeRequest = [
       `${req.method} ${req.url} HTTP/1.1`,
-      filteredHeaders,
+      rewrittenHeaders,
       '',
       ''
     ].join('\r\n');
