@@ -38,16 +38,14 @@ function configureOpenClaw() {
 
 // Start OpenClaw gateway as child process
 function startOpenClaw() {
-  // Configure proxy trust before starting
-  configureOpenClaw();
-  
   console.log('Starting OpenClaw gateway...');
   
   const args = [
     'openclaw', 'gateway',
     '--port', String(OPENCLAW_PORT),
     '--bind', 'lan',
-    '--allow-unconfigured'
+    '--allow-unconfigured',
+    '--force'  // Kill any existing process on this port
   ];
 
   // Add token if configured
@@ -200,10 +198,16 @@ process.on('SIGINT', () => {
   server.close(() => process.exit(0));
 });
 
-// Start
-startOpenClaw();
+// Configure and start
+// IMPORTANT: Configure FIRST, before anything starts
+configureOpenClaw();
+
+// Start HTTP server first (for health checks)
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Proxy server listening on port ${PORT}`);
   console.log(`OpenClaw gateway will run on port ${OPENCLAW_PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+  
+  // Start OpenClaw after server is ready
+  startOpenClaw();
 });
