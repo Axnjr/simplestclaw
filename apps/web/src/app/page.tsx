@@ -306,7 +306,7 @@ export default function Home() {
                 {/* Step 1: Choose Provider */}
                 <div className="mb-6">
                   <p className="text-[13px] text-white/40 mb-3">Step 1: Choose your AI provider</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {/* Anthropic */}
                     <button
                       onClick={() => setSelectedProvider('anthropic')}
