@@ -56,6 +56,7 @@ pub fn run() {
             // Config
             config::get_config,
             config::set_api_key,
+            config::set_provider,
             config::has_api_key,
             // Gateway
             sidecar::start_gateway,

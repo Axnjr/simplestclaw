@@ -1,11 +1,71 @@
 import { AlertCircle, Check, Eye, EyeOff, Loader2, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../../lib/store';
-import { type RuntimeStatus as TauriRuntimeStatus, tauri } from '../../lib/tauri';
+import { type Provider, type RuntimeStatus as TauriRuntimeStatus, tauri } from '../../lib/tauri';
+
+const PROVIDER_INFO: Record<Provider, { name: string; placeholder: string; url: string }> = {
+  anthropic: {
+    name: 'Anthropic',
+    placeholder: 'sk-ant-api03-...',
+    url: 'https://console.anthropic.com/settings/keys',
+  },
+  openai: {
+    name: 'OpenAI',
+    placeholder: 'sk-...',
+    url: 'https://platform.openai.com/api-keys',
+  },
+  google: {
+    name: 'Gemini',
+    placeholder: 'AIza...',
+    url: 'https://aistudio.google.com/app/apikey',
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    placeholder: 'sk-or-...',
+    url: 'https://openrouter.ai/keys',
+  },
+};
+
+// Provider Section Component
+function ProviderSection({
+  provider,
+  onProviderChange,
+  saving,
+}: {
+  provider: Provider;
+  onProviderChange: (p: Provider) => void;
+  saving: boolean;
+}) {
+  return (
+    <section>
+      <h2 className="text-[15px] font-medium mb-1">AI Provider</h2>
+      <p className="text-[13px] text-white/40 mb-4">Select your AI provider.</p>
+
+      <div className="grid grid-cols-2 gap-2">
+        {(Object.keys(PROVIDER_INFO) as Provider[]).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onProviderChange(p)}
+            disabled={saving}
+            className={`px-4 py-3 rounded-xl border transition-all text-left ${
+              provider === p
+                ? 'bg-white/10 border-white/30'
+                : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.05] hover:border-white/20'
+            } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <span className="text-[14px] text-white/80">{PROVIDER_INFO[p].name}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 // API Key Section Component
 function ApiKeySection({
   apiKey,
+  provider,
   onApiKeyChange,
   onSave,
   showKey,
@@ -15,6 +75,7 @@ function ApiKeySection({
   error,
 }: {
   apiKey: string;
+  provider: Provider;
   onApiKeyChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSave: () => void;
   showKey: boolean;
@@ -25,12 +86,13 @@ function ApiKeySection({
 }) {
   const isMasked = apiKey.includes('••••');
   const canSave = apiKey.trim() && !isMasked && !saving;
+  const providerInfo = PROVIDER_INFO[provider];
 
   return (
     <section>
       <h2 className="text-[15px] font-medium mb-1">API Key</h2>
       <p className="text-[13px] text-white/40 mb-4">
-        Your Anthropic API key. Stored locally on your device.
+        Your {providerInfo.name} API key. Stored locally on your device.
       </p>
 
       <div className="space-y-3">
@@ -44,7 +106,7 @@ function ApiKeySection({
                 onApiKeyChange({ target: { value: '' } } as React.ChangeEvent<HTMLInputElement>);
               }
             }}
-            placeholder="sk-ant-api03-..."
+            placeholder={providerInfo.placeholder}
             className="w-full px-4 py-3 pr-12 rounded-xl bg-white/[0.02] border border-white/10 text-[15px] placeholder-white/30 focus:outline-none focus:border-white/20 font-mono transition-colors"
           />
           <button
@@ -92,12 +154,12 @@ function ApiKeySection({
       <p className="mt-3 text-[12px] text-white/30">
         Get your key from{' '}
         <a
-          href="https://console.anthropic.com/settings/keys"
+          href={providerInfo.url}
           target="_blank"
           rel="noopener noreferrer"
           className="text-white/50 hover:text-white/70 transition-colors underline"
         >
-          console.anthropic.com
+          {providerInfo.name}
         </a>
       </p>
     </section>
@@ -235,7 +297,7 @@ function AppInfoSection() {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[14px] text-white/60">Version</span>
-          <span className="text-[14px] text-white/80 font-mono">0.2.0</span>
+          <span className="text-[14px] text-white/80 font-mono">0.2.4</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[14px] text-white/60">Source</span>
@@ -291,6 +353,7 @@ function LogoutSection({
 // Main GeneralTab Component
 export function GeneralTab() {
   const { addActivityLog, setScreen, setGatewayStatus, setApiKeyConfigured } = useAppStore();
+  const [provider, setProvider] = useState<Provider>('anthropic');
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -303,8 +366,10 @@ export function GeneralTab() {
     const fetchData = async () => {
       try {
         const config = await tauri.getConfig();
+        setProvider(config.provider || 'anthropic');
         if (config.anthropicApiKey) {
-          setApiKey('sk-ant-api03-••••••••••••••••••••••••••••••••');
+          const placeholder = PROVIDER_INFO[config.provider || 'anthropic'].placeholder;
+          setApiKey(`${placeholder.split('...')[0]}••••••••••••••••••••••••••••••••`);
         }
         const runtime = await tauri.getRuntimeStatus();
         setRuntimeDetails(runtime);
@@ -314,6 +379,28 @@ export function GeneralTab() {
     };
     fetchData();
   }, []);
+
+  const handleProviderChange = async (newProvider: Provider) => {
+    if (newProvider === provider) return;
+
+    setSaving(true);
+    try {
+      await tauri.setProvider(newProvider);
+      setProvider(newProvider);
+      // Clear the API key display since it's for a different provider now
+      setApiKey('');
+      addActivityLog({
+        operationType: 'api_call',
+        details: `Switched to ${PROVIDER_INFO[newProvider].name}`,
+        status: 'success',
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setApiKey(e.target.value);
@@ -373,8 +460,14 @@ export function GeneralTab() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="space-y-8">
+        <ProviderSection
+          provider={provider}
+          onProviderChange={handleProviderChange}
+          saving={saving}
+        />
         <ApiKeySection
           apiKey={apiKey}
+          provider={provider}
           onApiKeyChange={handleApiKeyChange}
           onSave={handleSaveKey}
           showKey={showKey}

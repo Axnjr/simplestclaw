@@ -172,8 +172,18 @@ impl SidecarManager {
                 "--allow-unconfigured",
             ])
             .env("PATH", &path_env)
-            .env("ANTHROPIC_API_KEY", &api_key)
-            .env("OPENCLAW_GATEWAY_TOKEN", &token)
+            .env("OPENCLAW_GATEWAY_TOKEN", &token);
+        
+        // Set the appropriate API key environment variable based on provider
+        use crate::config::Provider;
+        match config.provider {
+            Provider::Anthropic => { cmd.env("ANTHROPIC_API_KEY", &api_key); }
+            Provider::Openai => { cmd.env("OPENAI_API_KEY", &api_key); }
+            Provider::Google => { cmd.env("GOOGLE_API_KEY", &api_key); }
+            Provider::Openrouter => { cmd.env("OPENROUTER_API_KEY", &api_key); }
+        }
+        
+        cmd
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());

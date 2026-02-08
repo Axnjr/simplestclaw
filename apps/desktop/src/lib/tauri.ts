@@ -1,7 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { ActivityLogEntry, GatewayInfo } from './store';
 
+export type Provider = 'anthropic' | 'openai' | 'google' | 'openrouter';
+
 export interface Config {
+  provider: Provider;
   anthropicApiKey: string | null;
   gatewayPort: number;
   autoStartGateway: boolean;
@@ -25,6 +28,10 @@ export const tauri = {
 
   async setApiKey(key: string): Promise<void> {
     return invoke('set_api_key', { key });
+  },
+
+  async setProvider(provider: Provider): Promise<void> {
+    return invoke('set_provider', { provider });
   },
 
   async hasApiKey(): Promise<boolean> {

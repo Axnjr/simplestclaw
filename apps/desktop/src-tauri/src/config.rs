@@ -13,9 +13,29 @@ pub enum ConfigError {
     Json(#[from] serde_json::Error),
 }
 
+/// Supported AI providers
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Provider {
+    Anthropic,
+    Openai,
+    Google,
+    Openrouter,
+}
+
+impl Default for Provider {
+    fn default() -> Self {
+        Provider::Anthropic
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
+    /// The selected AI provider
+    #[serde(default)]
+    pub provider: Provider,
+    /// API key (used for the selected provider)
     pub anthropic_api_key: Option<String>,
     #[serde(default = "default_port")]
     pub gateway_port: u16,
@@ -34,6 +54,7 @@ fn default_auto_start() -> bool {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            provider: Provider::default(),
             anthropic_api_key: None,
             gateway_port: default_port(),
             auto_start_gateway: default_auto_start(),
@@ -77,7 +98,20 @@ pub fn get_config() -> Result<Config, String> {
 #[tauri::command]
 pub fn set_api_key(key: String) -> Result<(), String> {
     let mut config = Config::load().map_err(|e| e.to_string())?;
-    config.anthropic_api_key = Some(key);
+    config.anthropic_api_key = if key.is_empty() { None } else { Some(key) };
+    config.save().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_provider(provider: String) -> Result<(), String> {
+    let mut config = Config::load().map_err(|e| e.to_string())?;
+    config.provider = match provider.to_lowercase().as_str() {
+        "anthropic" => Provider::Anthropic,
+        "openai" => Provider::Openai,
+        "google" => Provider::Google,
+        "openrouter" => Provider::Openrouter,
+        _ => return Err(format!("Unknown provider: {}", provider)),
+    };
     config.save().map_err(|e| e.to_string())
 }
 
