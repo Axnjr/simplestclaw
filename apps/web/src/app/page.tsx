@@ -78,14 +78,9 @@ export default function Home() {
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center">
             <h1 className="text-[56px] sm:text-[72px] font-medium tracking-[-0.04em] leading-[1.05]">
-              Deploy OpenClaw in{' '}
-              <span 
-                className="tabular-nums transition-colors duration-100"
-                style={{ color: timerColor }}
-              >
-                {showFinal ? '<1' : timeCount === 60 ? '60+' : timeCount}
-              </span>
-              {' '}minute{showFinal ? '' : 's'}
+              Deploy OpenClaw with{' '}
+              <span className="text-emerald-400">0</span>
+              {' '}stress
             </h1>
             <p className="mt-6 text-[19px] text-white/50 leading-relaxed max-w-xl mx-auto">
               The easiest way to run OpenClaw. No terminal, no Telegram bots, no server configuration.
