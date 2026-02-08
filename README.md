@@ -14,7 +14,7 @@ simplestclaw makes it dead simple to get OpenClaw running - either on your own m
 1. **Local (Free)** - Download our desktop app, it bundles OpenClaw and runs on your machine
 2. **Hosted (~$5/mo)** - Click "Deploy on Railway" and get a cloud instance in 60 seconds
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/gEz3TD?referralCode=Y7R5kV)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/simplestclaw)
 
 ## Features
 
@@ -39,7 +39,7 @@ Download for your platform:
 
 Deploy OpenClaw to the cloud in under 60 seconds:
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/gEz3TD?referralCode=Y7R5kV)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/simplestclaw)
 
 **Steps:**
 1. Click the button above
