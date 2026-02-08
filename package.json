@@ -1,0 +1,32 @@
+{
+  "name": "simplestclaw",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The simplest way to set up and use OpenClaw - one click, no Telegram required",
+  "license": "MIT",
+  "author": "simplestclaw",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mbron64/simplestclaw.git"
+  },
+  "packageManager": "pnpm@9.15.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=@simplestclaw/web",
+    "dev:desktop": "turbo dev --filter=@simplestclaw/desktop",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "format": "biome format --write .",
+    "check": "biome check .",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "turbo": "^2.4.4",
+    "typescript": "^5.7.3"
+  }
+}
