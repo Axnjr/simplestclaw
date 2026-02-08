@@ -88,7 +88,7 @@ export default function Home() {
               {' '}minute{showFinal ? '' : 's'}
             </h1>
             <p className="mt-6 text-[19px] text-white/50 leading-relaxed max-w-xl mx-auto">
-              The fastest way to run OpenClaw. No terminal, no Telegram bots, no server configuration.
+              The easiest way to run OpenClaw. No terminal, no Telegram bots, no server configuration.
             </p>
           </div>
 
