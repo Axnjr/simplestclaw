@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'child_process';
+import { spawn } from 'child_process';
 import http from 'http';
 import net from 'net';
 
@@ -8,33 +8,6 @@ const OPENCLAW_PORT = 18789;
 // Health check state
 let openclawHealthy = false;
 let openclawProcess = null;
-let configuredProxy = false;
-
-// Configure OpenClaw to trust our local proxy
-function configureOpenClaw() {
-  if (configuredProxy) return;
-  
-  console.log('Configuring OpenClaw trustedProxies...');
-  
-  const result = spawnSync('npx', [
-    'openclaw', 'config', 'set', 
-    'gateway.trustedProxies', 
-    '["127.0.0.1"]'
-  ], {
-    stdio: 'pipe',
-    env: {
-      ...process.env,
-      NODE_OPTIONS: '--max-old-space-size=2048',
-    }
-  });
-  
-  if (result.status === 0) {
-    console.log('OpenClaw trustedProxies configured successfully');
-    configuredProxy = true;
-  } else {
-    console.error('Failed to configure trustedProxies:', result.stderr?.toString());
-  }
-}
 
 // Start OpenClaw gateway as child process
 function startOpenClaw() {
@@ -91,6 +64,20 @@ function startOpenClaw() {
   }, 3000);
 }
 
+// Filter out proxy headers so OpenClaw treats connections as local
+function filterProxyHeaders(headers) {
+  const filtered = {};
+  for (const [key, value] of Object.entries(headers)) {
+    const lowerKey = key.toLowerCase();
+    if (!lowerKey.startsWith('x-forwarded') && 
+        !lowerKey.startsWith('x-real') &&
+        lowerKey !== 'forwarded') {
+      filtered[key] = value;
+    }
+  }
+  return filtered;
+}
+
 // Proxy HTTP request to OpenClaw
 function proxyRequest(req, res) {
   const options = {
@@ -99,7 +86,7 @@ function proxyRequest(req, res) {
     path: req.url,
     method: req.method,
     headers: {
-      ...req.headers,
+      ...filterProxyHeaders(req.headers),
       host: `localhost:${OPENCLAW_PORT}`
     }
   };
@@ -144,14 +131,20 @@ const server = http.createServer((req, res) => {
 server.on('upgrade', (req, socket, head) => {
   // Create TCP connection to OpenClaw
   const proxySocket = net.connect(OPENCLAW_PORT, 'localhost', () => {
-    // Reconstruct the HTTP upgrade request
-    const headers = Object.entries(req.headers)
+    // Filter out proxy headers so OpenClaw treats connection as local
+    const filteredHeaders = Object.entries(req.headers)
+      .filter(([key]) => {
+        const lowerKey = key.toLowerCase();
+        return !lowerKey.startsWith('x-forwarded') && 
+               !lowerKey.startsWith('x-real') &&
+               lowerKey !== 'forwarded';
+      })
       .map(([key, value]) => `${key}: ${value}`)
       .join('\r\n');
     
     const upgradeRequest = [
       `${req.method} ${req.url} HTTP/1.1`,
-      headers,
+      filteredHeaders,
       '',
       ''
     ].join('\r\n');
@@ -197,16 +190,10 @@ process.on('SIGINT', () => {
   server.close(() => process.exit(0));
 });
 
-// Configure and start
-// IMPORTANT: Configure FIRST, before anything starts
-configureOpenClaw();
-
-// Start HTTP server first (for health checks)
+// Start
+startOpenClaw();
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Proxy server listening on port ${PORT}`);
   console.log(`OpenClaw gateway will run on port ${OPENCLAW_PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
-  
-  // Start OpenClaw after server is ready
-  startOpenClaw();
 });
