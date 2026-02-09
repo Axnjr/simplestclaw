@@ -252,7 +252,7 @@ export function Chat() {
       </header>
 
       {/* Messages - content is king */}
-      <div className="flex-1 overflow-y-auto px-6 py-8">
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-6 py-8">
         {messages.length === 0 && connectionState === 'connected' && (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <p className="text-[17px] text-white/50 mb-2">Ready</p>
