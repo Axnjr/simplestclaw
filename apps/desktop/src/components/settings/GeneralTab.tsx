@@ -220,8 +220,12 @@ function GatewayStatusSection() {
   };
 
   const statusDisplay = getStatusDisplay();
+  // Include token in URL so Control UI auto-authenticates
+  // The token is stored in localStorage after first load and removed from URL
   const dashboardUrl =
-    gatewayStatus.type === 'running' ? `http://localhost:${gatewayStatus.info.port}/` : null;
+    gatewayStatus.type === 'running'
+      ? `http://localhost:${gatewayStatus.info.port}/?token=${encodeURIComponent(gatewayStatus.info.token)}`
+      : null;
 
   return (
     <section>
