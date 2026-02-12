@@ -46,6 +46,7 @@ export class OpenClawClient {
   >();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private tickTimer: ReturnType<typeof setInterval> | null = null;
+  private healthCheckTimer: ReturnType<typeof setInterval> | null = null;
   private sessionKey = 'agent:main:main'; // Default session key
 
   // Track pending chat messages by runId
@@ -53,6 +54,7 @@ export class OpenClawClient {
     string,
     {
       content: string;
+      gotFinal: boolean; // Whether we received chat 'final' event
       resolve: (message: Message) => void;
       reject: (error: Error) => void;
     }
@@ -101,9 +103,7 @@ export class OpenClawClient {
         this.ws.onmessage = async (event) => {
           try {
             const dataStr = typeof event.data === 'string' ? event.data : event.data.toString();
-            console.log('[openclaw-client] RAW message:', dataStr.substring(0, 500));
             const data = JSON.parse(dataStr);
-            console.log('[openclaw-client] Parsed type:', data.type, 'event:', data.event);
             await this.handleMessage(data, resolve);
           } catch (err) {
             console.error('[openclaw-client] Failed to parse message:', err);
@@ -120,6 +120,7 @@ export class OpenClawClient {
 
         this.ws.onclose = (event) => {
           this.stopTickTimer();
+          this.stopHealthCheck();
           this.setState('disconnected');
           this.handlers.onDisconnect?.(event.reason);
 
@@ -138,6 +139,7 @@ export class OpenClawClient {
   disconnect(): void {
     this.config.autoReconnect = false;
     this.stopTickTimer();
+    this.stopHealthCheck();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -160,20 +162,19 @@ export class OpenClawClient {
       message,
     };
 
-    console.log(
-      '[openclaw-client] Sending chat.send with params:',
-      JSON.stringify(params).substring(0, 200)
-    );
-
     // Send the request and get the runId
     const response = (await this.request('chat.send', params)) as { runId: string; status: string };
     const runId = response.runId;
-    console.log('[openclaw-client] chat.send started, runId:', runId);
 
-    // Wait for streaming events to complete
+    // Wait for streaming events to complete.
+    // The gateway sends two parallel event streams:
+    //   1. 'agent' events: lifecycle start/end + assistant text (primary content delivery)
+    //   2. 'chat' events: delta/final state transitions (may arrive before text is ready)
+    // We resolve when BOTH content has been received AND a completion signal arrives.
     return new Promise((resolve, reject) => {
       this.pendingChats.set(runId, {
         content: '',
+        gotFinal: false,
         resolve: (msg) => {
           this.pendingChats.delete(runId);
           resolve(msg);
@@ -187,6 +188,9 @@ export class OpenClawClient {
       // Timeout after 2 minutes
       setTimeout(() => {
         if (this.pendingChats.has(runId)) {
+          console.error(
+            `[openclaw-client] Chat streaming timed out for runId=${runId}. ws.readyState=${this.ws?.readyState} state=${this.state}`
+          );
           this.pendingChats.delete(runId);
           reject(new Error('Chat response timed out'));
         }
@@ -200,6 +204,22 @@ export class OpenClawClient {
       throw new Error('Not connected to Gateway');
     }
 
+    // Critical: Check actual WebSocket readyState to detect silently closed connections
+    const readyState = this.ws.readyState;
+    if (readyState !== WebSocket.OPEN) {
+      console.error(
+        `[openclaw-client] WebSocket not OPEN! readyState=${readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED), state=${this.state}`
+      );
+      // Force state update and trigger reconnection
+      this.setState('disconnected');
+      if (this.config.autoReconnect) {
+        this.scheduleReconnect();
+      }
+      throw new Error(
+        `WebSocket is not open (readyState=${readyState}). Connection may have dropped silently. Reconnecting...`
+      );
+    }
+
     const id = this.nextRequestId();
     const request: GatewayRequest = {
       type: 'req',
@@ -210,7 +230,14 @@ export class OpenClawClient {
 
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { resolve, reject });
-      this.ws?.send(JSON.stringify(request));
+      try {
+        this.ws?.send(JSON.stringify(request));
+      } catch (sendErr) {
+        console.error('[openclaw-client] ws.send() threw:', sendErr);
+        this.pendingRequests.delete(id);
+        reject(new Error(`Failed to send ${method}: ${sendErr}`));
+        return;
+      }
 
       // Timeout after 30s
       setTimeout(() => {
@@ -244,6 +271,9 @@ export class OpenClawClient {
       case 'chat':
         this.handleChatStreamEvent(event.payload as Record<string, unknown>);
         break;
+      case 'agent':
+        this.handleAgentEvent(event.payload as Record<string, unknown>);
+        break;
       case 'chat.message':
         this.handlers.onMessage?.(event.payload as Message);
         break;
@@ -255,8 +285,36 @@ export class OpenClawClient {
         // Gateway tick event -- no action needed, our tick timer handles keepalive
         break;
       default:
-        console.log('[openclaw-client] Unhandled event:', event.event);
+        break;
     }
+  }
+
+  /** Handle agent events from the gateway (primary content delivery) */
+  private handleAgentEvent(payload: Record<string, unknown>): void {
+    const runId = payload.runId as string | undefined;
+    const stream = payload.stream as string | undefined;
+    const data = payload.data as Record<string, unknown> | undefined;
+
+    if (!runId || !data) return;
+
+    const pending = this.pendingChats.get(runId);
+    if (!pending) return;
+
+    if (stream === 'assistant') {
+      // The gateway delivers actual text content through agent assistant events.
+      // This always arrives before the corresponding agent lifecycle 'end'.
+      const text = (data.text as string) || '';
+      if (text) {
+        pending.content = text;
+        // If we already received 'chat final' but were waiting for content, resolve now
+        if (pending.gotFinal) {
+          this.resolveChat(pending, runId);
+        }
+      }
+    }
+    // Note: We intentionally ignore agent lifecycle events for finalization.
+    // The gateway runs multiple agent phases (planning, execution, etc.) and
+    // lifecycle 'end' events fire for each phase, not just the final one.
   }
 
   /** Handle streaming chat events from the gateway */
@@ -264,20 +322,10 @@ export class OpenClawClient {
     const runId = payload.runId as string | undefined;
     const state = payload.state as string | undefined;
 
-    console.log('[openclaw-client] Chat event - state:', state, 'runId:', runId);
+    if (!runId) return;
 
-    // Early return for missing runId
-    if (!runId) {
-      console.log('[openclaw-client] No runId in chat event');
-      return;
-    }
-
-    // Early return for unknown runId
     const pending = this.pendingChats.get(runId);
-    if (!pending) {
-      console.log('[openclaw-client] No pending chat for runId:', runId);
-      return;
-    }
+    if (!pending) return;
 
     const messageText = this.extractMessageText(payload);
     this.processChatState(state, pending, runId, messageText, payload);
@@ -287,26 +335,23 @@ export class OpenClawClient {
   private extractMessageText(payload: Record<string, unknown>): string {
     const message = payload.message as { role?: string; content?: unknown[] } | undefined;
 
-    console.log(
-      '[openclaw-client] Chat message object:',
-      JSON.stringify(message).substring(0, 500)
-    );
-
     if (!message?.content || !Array.isArray(message.content)) {
-      console.log('[openclaw-client] No content array in message');
       return '';
     }
 
     const firstContent = message.content[0] as { type?: string; text?: string } | undefined;
-    const text = firstContent?.text ?? '';
-    console.log('[openclaw-client] Extracted text:', text.substring(0, 100));
-    return text;
+    return firstContent?.text ?? '';
   }
 
   /** Process chat state transitions (delta, final, error) */
   private processChatState(
     state: string | undefined,
-    pending: { content: string; resolve: (msg: Message) => void; reject: (err: Error) => void },
+    pending: {
+      content: string;
+      gotFinal: boolean;
+      resolve: (msg: Message) => void;
+      reject: (err: Error) => void;
+    },
     runId: string,
     messageText: string,
     payload: Record<string, unknown>
@@ -315,33 +360,45 @@ export class OpenClawClient {
       case 'delta':
         if (messageText) {
           pending.content = messageText;
+          // If we somehow got final before delta (shouldn't happen, but be safe)
+          if (pending.gotFinal) {
+            this.resolveChat(pending, runId);
+          }
         }
-        console.log(
-          '[openclaw-client] Delta update, pending.content length:',
-          pending.content.length
-        );
         break;
       case 'final':
-        this.finalizeChatMessage(pending, runId, messageText);
+        if (messageText) {
+          pending.content = messageText;
+        }
+        pending.gotFinal = true;
+        if (pending.content.length > 0) {
+          // We have content + final signal -- resolve immediately
+          this.resolveChat(pending, runId);
+        }
+        // Otherwise: content hasn't arrived yet (common with the gateway).
+        // The 'agent assistant' event or a 'chat delta' will deliver it and
+        // check gotFinal to resolve at that point. The 120s timeout is the
+        // ultimate fallback if content never arrives.
         break;
       case 'error':
         this.handleChatError(pending, payload);
         break;
       default:
-        console.log('[openclaw-client] Unknown chat state:', state);
+        break;
     }
   }
 
-  /** Finalize and resolve a completed chat message */
-  private finalizeChatMessage(
-    pending: { content: string; resolve: (msg: Message) => void; reject: (err: Error) => void },
-    runId: string,
-    messageText: string
+  /** Resolve a completed chat message */
+  private resolveChat(
+    pending: {
+      content: string;
+      resolve: (msg: Message) => void;
+      reject: (err: Error) => void;
+    },
+    runId: string
   ): void {
-    if (messageText) {
-      pending.content = messageText;
-    }
-    console.log('[openclaw-client] Final - pending.content:', pending.content.substring(0, 100));
+    // Guard against double-resolve (both streams may trigger tryFinalize)
+    if (!this.pendingChats.has(runId)) return;
 
     const assistantMessage: Message = {
       id: `msg-${runId}`,
@@ -350,10 +407,6 @@ export class OpenClawClient {
       timestamp: Date.now(),
     };
 
-    console.log(
-      '[openclaw-client] Resolving with content length:',
-      assistantMessage.content.length
-    );
     this.handlers.onMessage?.(assistantMessage);
     pending.resolve(assistantMessage);
   }
@@ -365,7 +418,6 @@ export class OpenClawClient {
   ): void {
     const errorPayload = payload.error as { message?: string } | undefined;
     const errorMsg = errorPayload?.message ?? 'Chat failed';
-    console.error('[openclaw-client] Chat error:', errorMsg);
     pending.reject(new Error(errorMsg));
   }
 
@@ -421,21 +473,15 @@ export class OpenClawClient {
       params: params as unknown as Record<string, unknown>,
     };
 
-    console.log(
-      '[openclaw-client] Sending connect request:',
-      JSON.stringify(request).substring(0, 300)
-    );
     ws.send(JSON.stringify(request));
 
     // Wait for hello-ok response
     const originalOnMessage = ws.onmessage;
     ws.onmessage = (event) => {
       try {
-        console.log('[openclaw-client] Connect response:', event.data.substring(0, 300));
         const data = JSON.parse(event.data) as GatewayResponse;
         if (data.type === 'res' && data.id === id) {
           if (data.ok) {
-            console.log('[openclaw-client] Connected successfully!');
 
             // Extract session key and tick policy from hello-ok payload
             const payload = data.payload as {
@@ -444,19 +490,17 @@ export class OpenClawClient {
             };
             if (payload?.snapshot?.sessionDefaults?.mainSessionKey) {
               this.sessionKey = payload.snapshot.sessionDefaults.mainSessionKey;
-              console.log('[openclaw-client] Using session key:', this.sessionKey);
             }
 
             // Start keepalive tick timer per gateway policy
             const tickIntervalMs = payload?.policy?.tickIntervalMs ?? 15000;
-            console.log('[openclaw-client] Starting tick timer:', tickIntervalMs, 'ms');
             this.startTickTimer(tickIntervalMs);
+            this.startHealthCheck();
 
             this.setState('connected');
             this.handlers.onConnect?.();
             connectResolve?.(undefined);
           } else {
-            console.error('[openclaw-client] Connection failed:', data.error);
             this.setState('error');
             this.handlers.onError?.(new Error(data.error?.message ?? 'Connection failed'));
           }
@@ -510,6 +554,32 @@ export class OpenClawClient {
     if (this.tickTimer) {
       clearInterval(this.tickTimer);
       this.tickTimer = null;
+    }
+  }
+
+  /** Start periodic WebSocket health check to detect zombie connections */
+  private startHealthCheck(): void {
+    this.stopHealthCheck();
+    this.healthCheckTimer = setInterval(() => {
+      const readyState = this.ws?.readyState;
+      // Detect zombie connection: our state says connected but WebSocket is actually dead
+      if (this.state === 'connected' && readyState !== undefined && readyState !== WebSocket.OPEN) {
+        console.error(
+          '[openclaw-client] WebSocket connection dropped silently. Reconnecting...'
+        );
+        this.setState('disconnected');
+        if (this.config.autoReconnect) {
+          this.scheduleReconnect();
+        }
+      }
+    }, 5000);
+  }
+
+  /** Stop health check timer */
+  private stopHealthCheck(): void {
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+      this.healthCheckTimer = null;
     }
   }
 
