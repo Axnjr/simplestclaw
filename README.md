@@ -60,8 +60,25 @@ Deploy to the cloud in 60 seconds. Pick your AI provider:
 
 - Railway Hobby plan ($5/month) — free trial has memory limits
 - API key from your chosen provider
+- Use `GEMINI_API_KEY` for Gemini deployments (`GOOGLE_API_KEY` is still accepted as a legacy alias)
 
 </details>
+
+### Programmatic Railway Templates (for apps)
+
+If you're provisioning Railway from your own app/backend (instead of clicking template buttons),
+use the provider presets in:
+
+`apps/gateway/railway-templates.json`
+
+Placeholders like `{{gemini_api_key}}` are meant to be substituted by your app/backend
+before calling Railway's API.
+
+This manifest includes:
+
+- Required variables per provider
+- Shared variables (including gateway token generation contract)
+- Provider pin + default model per provider (so first-run doesn't fall back to Anthropic)
 
 ---
 

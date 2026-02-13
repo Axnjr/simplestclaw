@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "description": "App-facing provider templates for programmatic Railway deployment of SimplestClaw Gateway.",
+  "service": {
+    "repo": "mbron64/simplestclaw",
+    "branch": "main",
+    "name": "openclaw-gateway",
+    "railwayConfigPath": "railway.json"
+  },
+  "sharedVariables": {
+    "OPENCLAW_GATEWAY_TOKEN": {
+      "required": true,
+      "source": "generate:hex:64",
+      "description": "Gateway auth token returned to the client for pairing."
+    },
+    "CI": {
+      "required": false,
+      "default": "false",
+      "description": "Prevents CI-only build behavior on Railway."
+    }
+  },
+  "templates": {
+    "anthropic": {
+      "displayName": "SimplestClaw Anthropic",
+      "defaultModel": "anthropic/claude-opus-4-6",
+      "requiredUserInputs": [
+        "anthropic_api_key"
+      ],
+      "variables": {
+        "OPENCLAW_PROVIDER": "anthropic",
+        "ANTHROPIC_API_KEY": "{{anthropic_api_key}}",
+        "MODEL": "anthropic/claude-opus-4-6"
+      }
+    },
+    "openai": {
+      "displayName": "SimplestClaw OpenAI",
+      "defaultModel": "openai/gpt-5.1-codex",
+      "requiredUserInputs": [
+        "openai_api_key"
+      ],
+      "variables": {
+        "OPENCLAW_PROVIDER": "openai",
+        "OPENAI_API_KEY": "{{openai_api_key}}",
+        "MODEL": "openai/gpt-5.1-codex"
+      }
+    },
+    "gemini": {
+      "displayName": "SimplestClaw Gemini",
+      "defaultModel": "google/gemini-3-pro-preview",
+      "requiredUserInputs": [
+        "gemini_api_key"
+      ],
+      "variables": {
+        "OPENCLAW_PROVIDER": "google",
+        "GEMINI_API_KEY": "{{gemini_api_key}}",
+        "GOOGLE_API_KEY": "{{gemini_api_key}}",
+        "MODEL": "google/gemini-3-pro-preview"
+      }
+    },
+    "openrouter": {
+      "displayName": "SimplestClaw OpenRouter",
+      "defaultModel": "openrouter/auto",
+      "requiredUserInputs": [
+        "openrouter_api_key"
+      ],
+      "variables": {
+        "OPENCLAW_PROVIDER": "openrouter",
+        "OPENROUTER_API_KEY": "{{openrouter_api_key}}",
+        "MODEL": "openrouter/auto"
+      }
+    }
+  }
+}
