@@ -482,7 +482,6 @@ export class OpenClawClient {
         const data = JSON.parse(event.data) as GatewayResponse;
         if (data.type === 'res' && data.id === id) {
           if (data.ok) {
-
             // Extract session key and tick policy from hello-ok payload
             const payload = data.payload as {
               snapshot?: { sessionDefaults?: { mainSessionKey?: string } };
@@ -564,9 +563,7 @@ export class OpenClawClient {
       const readyState = this.ws?.readyState;
       // Detect zombie connection: our state says connected but WebSocket is actually dead
       if (this.state === 'connected' && readyState !== undefined && readyState !== WebSocket.OPEN) {
-        console.error(
-          '[openclaw-client] WebSocket connection dropped silently. Reconnecting...'
-        );
+        console.error('[openclaw-client] WebSocket connection dropped silently. Reconnecting...');
         this.setState('disconnected');
         if (this.config.autoReconnect) {
           this.scheduleReconnect();
